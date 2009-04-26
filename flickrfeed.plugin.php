@@ -144,11 +144,42 @@ class FlickrFeed extends Plugin
 		return true;
 	}
 
+	public function filter_block_list($block_list)
+	{
+		$block_list['flickrfeed'] = _t('Flickr Feed');
+		return $block_list;
+	}
+
+	public function action_block_content_flickrfeed($block)
+	{
+		$options = $this->default_options();
+		$params = array();
+		foreach($options as $key => $value) {
+			if(isset($block->$key)) {
+				$params[$key] = $block->$key;
+			}
+		}
+		if(isset($block->flickrfeed_type)) {
+			$params['type'] = $block->flickrfeed_type;
+		}
+		else {
+			$params['type'] = $options['type'];
+		}
+		$params = array_merge($this->config, $params);
+
+		if ($this->plugin_configured($params)) {
+			$block->images = $this->load_feeds($params);
+		}
+		else {
+			$block->error = _t('FlickrFeed Plugin is not configured properly.', $this->class_name);
+		}
+	}
+	
 	private function load_feeds($params = array())
 	{
 		$cache_name = $this->class_name . '__' . md5(serialize($params));
 
-		if (Cache::has($cache_name)) {
+		if (false && Cache::has($cache_name)) {
 			// Read from cache
 			return Cache::get($cache_name);
 		}
@@ -264,6 +295,7 @@ class FlickrFeed extends Plugin
 		}
 		$this->load_text_domain($this->class_name);
 		$this->add_template('flickrfeed', dirname(__FILE__) . '/flickrfeed.php');
+		$this->add_template('block.flickrfeed', dirname(__FILE__) . '/block.flickrfeed.php');
 	}
 }
 ?>
