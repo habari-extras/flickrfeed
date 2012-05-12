@@ -87,13 +87,34 @@ class FlickrFeed extends Plugin
 				'medium_z' => str_replace( '_m.jpg', '_z.jpg', $image[ 'm_url' ] ),
 				'large' => str_replace( '_m.jpg', '_b.jpg', $image[ 'm_url' ] ),
 				'original' => $image[ 'photo_url' ],
+				'square' => $image[ 't_url' ],
 				'default' => $image[ 't_url' ],
 			);
 			if( isset( $image[ 'image_sizes' ][ $block->image_size ] ) ) {
+				$image[ 'local_file' ] = Site::get_dir('user', '/files/flickrfeed/' . $block->image_size . '/' . basename($image[ 'image_sizes' ][ $block->image_size ]));
+				$image[ 'local_url' ] = Site::get_url('user', '/files/flickrfeed/' . $block->image_size . '/' . basename($image[ 'image_sizes' ][ $block->image_size ]));
 				$image[ 'image_url' ] = $image[ 'image_sizes' ][ $block->image_size ];
 			}
 			else {
+				$image[ 'local_file' ] = Site::get_dir('user', '/files/flickrfeed/default/' . basename($image[ 'image_sizes' ][ 'default' ]));
+				$image[ 'local_url' ] = Site::get_url('user', '/files/flickrfeed/default/' . basename($image[ 'image_sizes' ][ 'default' ]));
 				$image[ 'image_url' ] = $image[ 'image_sizes' ][ 'default' ];
+			}
+
+			if($block->cache_locally) {
+				if(!file_exists($image['local_file'])) {
+					if(!file_exists(dirname($image['local_file']))) {
+						$umask = umask(0);
+						mkdir(dirname($image['local_file']), 0777, true);
+						umask($umask);
+					}
+					if(is_writable(dirname($image['local_file']))) {
+						file_put_contents($image['local_file'], file_get_contents($image[ 'image_url' ]));
+					}
+				}
+				if(file_exists($image['local_file'])) {
+					$image['image_url'] = $image['local_url'];
+				}
 			}
 		}
 
@@ -177,6 +198,8 @@ class FlickrFeed extends Plugin
 		$form->image_size->add_validator( 'validate_required' );
 
 		$form->append( 'text', 'image_tags', $block, _t( 'Tags ( comma separated, no space )', 'flickrfeed' ) );
+
+		$form->append( 'checkbox', 'cache_locally', $block, _t('Cache output photos locally', 'flickrfeed'));
 
 		$form->append( 'text', 'cache_expiry', $block, _t( 'Cache Expiry ( in seconds )', 'flickrfeed' ) );
 		$form->cache_expiry->add_validator( 'validate_uint' );
